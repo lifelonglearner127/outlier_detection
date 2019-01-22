@@ -14,7 +14,7 @@ sub_system_names = [
 
 
 def analyze_data(file_name):
-    df = pd.read_csv(file_name, sep='\t')
+    df = pd.read_csv(file_name)
     df.timestamp = pd.to_datetime(df.timestamp, format='%Y-%m-%d %H:%M:%S.%f')
     df['sub_system']=df['meta_name'].str.split('-').str[0]
     df['sensor']=df['meta_name'].str.split('-').str[1]
@@ -85,7 +85,7 @@ def analyze_data(file_name):
 
 def export_dataset_by_sensor(df, sensor_name):
     df = df[df.meta_name.str.endswith(sensor_name)]
-    df.to_csv(sensor_name + '.csv', index=False, sep='\t')
+    df.to_csv(sensor_name + '.csv', index=False)
     return df
 
 
