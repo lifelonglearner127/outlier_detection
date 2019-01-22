@@ -5,7 +5,7 @@ from pandas.io.json import json_normalize
 
 
 def extract_dataset(data_file, sub_system, sensor):
-    df = pd.read_csv(data_file, sep='\t')
+    df = pd.read_csv(data_file)
     df.timestamp = pd.to_datetime(df.timestamp, format='%Y-%m-%d %H:%M:%S.%f')
     df['sub_system']=df['meta_name'].str.split('-').str[0]
     df['sensor']=df['meta_name'].str.split('-').str[1]
