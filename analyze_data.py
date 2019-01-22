@@ -12,11 +12,6 @@ sub_system_names = [
     '227006', '227007', '227008', '227009', '227010'
 ]
 
-palette = [
-    '#000000', '#550000', '#aa0000', '#ff0000', '#005500',
-    '#00aa00', '#00ff00', '#000055', '#0000aa', '#0000ff'
-]
-
 
 def analyze_data(file_name):
     df = pd.read_csv(file_name, sep='\t')
@@ -60,7 +55,10 @@ def analyze_data(file_name):
     plt.figure(figsize=(12,7))
     for sensor in sub_sensors:
         dataset_by_sensor = df[df.sensor == sensor]
-        sns.countplot(x="sub_system", data=dataset_by_sensor)
+        sns.countplot(
+            x="sub_system", data=dataset_by_sensor,
+            palette=sns.color_palette("bright", len(sub_system_names))
+        )
         savefig(os.path.join(bar_images_path, sensor + '.png'))
         plt.clf()
         print('Generated ' + sensor + '.png file')
@@ -75,7 +73,8 @@ def analyze_data(file_name):
         dataset_by_sensor = df[df.sensor == sensor]
         sns.lineplot(
             x="timestamp", y="value", hue="sub_system",
-            palette=palette, data=dataset_by_sensor
+            palette=sns.color_palette("bright", len(sub_system_names)),
+            data=dataset_by_sensor
         )
         savefig(os.path.join(series_images_path, sensor + '.png'))
         plt.clf()
