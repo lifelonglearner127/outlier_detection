@@ -2,6 +2,7 @@ import os
 import argparse
 import pandas as pd
 import numpy as np
+from matplotlib.pyplot import savefig
 
 
 sub_system_names = [
@@ -32,6 +33,30 @@ def analyze_data(file_name):
         sub_sensors = sub_sensors.sort_values()
         sub_sensors.to_csv(sub_system + '.csv', index=False)
 
+    # Observe the dataset we really cares about
+    df = df[df['sub_system'].isin(sub_system_names)]
+    
+    # Export Images
+    # Export bars
+    bar_images_path = 'images/bars'
+    if not os.path.exists(bar_images_path):
+        os.makedirs(bar_images_path)
+    
+    for sensor in sub_sensors:
+        print('Generationg ' + sensor + '.png file' )
+        dataset_by_sensor = df[df.sensor == sensor]
+        counts = dataset_by_sensor.groupby('sub_system').agg(len)['buildingId']
+        counts.plot(kind='barh')
+        savefig(os.path.join(bar_images_path, sensor + '.png'))
+
+    return df
+
+
+def export_dataset_by_sensor(df, sensor_name):
+    df = df[df.meta_name.str.endswith(sensor_name)]
+    df.to_csv(sensor_name + '.csv', index=False, sep='\t')
+    return df
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -41,6 +66,14 @@ if __name__ == '__main__':
         default='data.csv',
         help='Specify the location of file'
     )
+    parser.add_argument(
+        '--export',
+        type=str,
+        help='Specify the location of file'
+    )
 
     args = parser.parse_args()
-    analyze_data(args.file)
+    df = analyze_data(args.file)
+    
+    if args.export:
+        export_dataset_by_sensor(df, args.export)
