@@ -2,6 +2,8 @@ import os
 import argparse
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 sub_system_names = [
@@ -12,7 +14,6 @@ sub_system_names = [
 
 def read_data(file):
     df = pd.read_csv(file)
-
     df.timestamp = pd.to_datetime(df.timestamp, format='%Y-%m-%d %H:%M:%S.%f')
     df['sub_system']=df['meta_name'].str.split('-').str[0]
     df['sensor']=df['meta_name'].str.split('-').str[1]
@@ -26,17 +27,31 @@ def detect_outlier_by_zscore(df, sensors):
     using z-score values
     """
     print('Discovering outliers with zscore method')
-    result_path = 'results/zscore'
-    if not os.path.exists(result_path):
-        os.makedirs(result_path)
+    csv_base_path = 'results/zscore/csv'
+    image_base_path = 'results/zscore/images'
+
+    plt.figure(figsize=(12, 7))
 
     for sub_system in sub_system_names:
+        csv_path = os.path.join(csv_base_path, sub_system)
+        if not os.path.exists(csv_path):
+            os.makedirs(csv_path)
+
+        image_path = os.path.join(image_base_path, sub_system)
+        if not os.path.exists(image_path):
+            os.makedirs(image_path)
+            
         for sensor in sensors:
-            file_name = '{0}_{1}.csv'.format(sub_system, sensor)
+            csv_file_name = '{0}.csv'.format(sensor)
+            image_file_name = '{0}.png'.format(sensor)
+            
             sub_df = df[(df.sub_system == sub_system) & (df.sensor == sensor)].copy()
             sub_df['zscore'] = (sub_df['value'] - sub_df['value'].mean())/sub_df['value'].std()
             sub_df['outlier'] = sub_df['zscore'].apply(lambda x: False if np.absolute(x) < 3 else True)
-            sub_df.to_csv(os.path.join(result_path, file_name))
+            sub_df.to_csv(os.path.join(csv_path, csv_file_name))
+            sns.relplot(x="timestamp", y="value", hue="outlier", data=sub_df)
+            plt.savefig(os.path.join(image_path, image_file_name))
+            plt.clf()
 
 
 def detect_outlier_by_iqr(df, sensors):
