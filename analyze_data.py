@@ -56,11 +56,11 @@ def analyze_data(file_name):
     bar_images_path = 'images/bars'
     if not os.path.exists(bar_images_path):
         os.makedirs(bar_images_path)
-    
+
+    plt.figure(figsize=(12,7))
     for sensor in sub_sensors:
         dataset_by_sensor = df[df.sensor == sensor]
-        counts = dataset_by_sensor.groupby('sub_system').agg(len)['buildingId']
-        counts.plot(kind='barh')
+        sns.countplot(x="sub_system", data=dataset_by_sensor)
         savefig(os.path.join(bar_images_path, sensor + '.png'))
         plt.clf()
         print('Generated ' + sensor + '.png file')
