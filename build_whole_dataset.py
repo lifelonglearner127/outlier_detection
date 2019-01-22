@@ -17,9 +17,7 @@ def build_whole_dataset(path):
         df = df.drop(columns='metadata')
         df = df.join(meta_df.add_prefix('meta_'))
         df.to_csv(
-            'data.csv', sep='\t',
-            date_format="%Y-%m-%d %H:%M:%S",
-            header=header, mode=mode, index=False
+            'data.csv', sep='\t', header=header, mode=mode, index=False
         )
         header = False
         mode = 'a'

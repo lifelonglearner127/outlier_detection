@@ -3,6 +3,8 @@ import argparse
 import pandas as pd
 import numpy as np
 from matplotlib.pyplot import savefig
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 sub_system_names = [
@@ -10,9 +12,15 @@ sub_system_names = [
     '227006', '227007', '227008', '227009', '227010'
 ]
 
+palette = [
+    '#000000', '#550000', '#aa0000', '#ff0000', '#005500',
+    '#00aa00', '#00ff00', '#000055', '#0000aa', '#0000ff'
+]
+
 
 def analyze_data(file_name):
     df = pd.read_csv(file_name, sep='\t')
+    df.timestamp = pd.to_datetime(df.timestamp, format='%Y-%m-%d %H:%M:%S.%f')
     df['sub_system']=df['meta_name'].str.split('-').str[0]
     df['sensor']=df['meta_name'].str.split('-').str[1]
 
@@ -48,6 +56,22 @@ def analyze_data(file_name):
         counts = dataset_by_sensor.groupby('sub_system').agg(len)['buildingId']
         counts.plot(kind='barh')
         savefig(os.path.join(bar_images_path, sensor + '.png'))
+        plt.clf()
+
+    # Export Series
+    series_images_path = 'images/series'
+    if not os.path.exists(series_images_path):
+        os.makedirs(series_images_path)
+
+    for sensor in sub_sensors:
+        print('Generationg ' + sensor + '.png file' )
+        dataset_by_sensor = df[df.sensor == sensor]
+        sns.lineplot(
+            x="timestamp", y="value", hue="sub_system",
+            palette=palette, data=dataset_by_sensor
+        )
+        savefig(os.path.join(series_images_path, sensor + '.png'))
+        plt.clf()
 
     return df
 
