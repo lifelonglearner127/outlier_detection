@@ -16,7 +16,7 @@ sub_system_names = [
 ]
 
 algorithms = [
-    'zscore', 'iqr'
+    'zscore', 'iqr', 'localfactor'
 ]
 
 
@@ -69,6 +69,9 @@ def detect_outliers(df, sensors, algorithms):
     csv_base_path = 'results/{0}/csv'
     images_base_path = 'results/{0}/images'
 
+    if 'localfactor' in algorithms:
+        clf = LocalOutlierFactor(n_neighbors=50, contamination=0.1)
+
     for algorithm in algorithms:
         algo_csv_base_path = csv_base_path.format(algorithm)
         algo_images_base_path = images_base_path.format(algorithm)
@@ -81,7 +84,8 @@ def detect_outliers(df, sensors, algorithms):
 
     for sensor in sensors:
         csv_file_name = sensor + '.csv'
-        image_file_name = sensor + '.png'
+        image_file_name1 = sensor + '_plot.png'
+        image_file_name2 = sensor + '_series.png'
         result = {}
         
         for algorithm in algorithms:
@@ -111,14 +115,26 @@ def detect_outliers(df, sensors, algorithms):
 
             if 'localfactor' in algorithms:
                 # Calculate local outlier factor
-                pass
+                lf_df = sub_df.copy()
+                lf_df['zscore'] = (lf_df['value'] - lf_df['value'].mean())/lf_df['value'].std()
+                x = lf_df['zscore'].values
+                x = np.nan_to_num(x)
+                x_ = x.reshape(-1, 1)
+                y = clf.fit_predict(x_)
+                lf_df['loc'] = clf.negative_outlier_factor_
+                lf_df['outlier'] = np.where(y == -1, True, False)
+                result['localfactor'].append(lf_df)
 
+                
         for algorithm in algorithms:
             df_by_sensor = pd.concat(result[algorithm], axis = 0, ignore_index = True)
             df_by_sensor.to_csv(os.path.join(csv_base_path.format(algorithm), csv_file_name), index=False)
             print('Finished exporting csv file about', sensor)
             sns.relplot(x="cloudTimestamp", y="value", hue="outlier", col="sub_system", col_wrap=3, data=df_by_sensor)
-            plt.savefig(os.path.join(images_base_path.format(algorithm), image_file_name))
+            plt.savefig(os.path.join(images_base_path.format(algorithm), image_file_name1))
+            plt.close()
+            sns.relplot(x="value", y="value", hue="outlier", col="sub_system", col_wrap=3, data=df_by_sensor)
+            plt.savefig(os.path.join(images_base_path.format(algorithm), image_file_name2))
             plt.close()
             print('Finished exporting image file about', sensor)
 
