@@ -6,13 +6,17 @@ import numpy as np
 import seaborn as sns
 from pandas.io.json import json_normalize
 import matplotlib.pyplot as plt
-
+from sklearn.neighbors import LocalOutlierFactor
 
 
 data_file = 'data.csv'
 sub_system_names = [
     '227001', '227002', '227003', '227004', '227005',
     '227006', '227007', '227008', '227009', '227010'
+]
+
+algorithms = [
+    'zscore', 'iqr'
 ]
 
 
@@ -61,63 +65,62 @@ def extract_info(df):
     return df, df[df['sub_system'] == '227001']['sensor'].unique()
 
 
-def detect_outliers_by_zscore_iqr(df, sensors):
-    zscore_csv_base_path = 'results/zscore/csv'
-    zscore_image_base_path = 'results/zscore/images'
-    iqr_csv_base_path = 'results/iqr/csv'
-    iqr_image_base_path = 'results/iqr/images'
-    if not os.path.exists(zscore_csv_base_path):
-        os.makedirs(zscore_csv_base_path)
+def detect_outliers(df, sensors, algorithms):
+    csv_base_path = 'results/{0}/csv'
+    images_base_path = 'results/{0}/images'
 
-    if not os.path.exists(zscore_image_base_path):
-        os.makedirs(zscore_image_base_path)
+    for algorithm in algorithms:
+        algo_csv_base_path = csv_base_path.format(algorithm)
+        algo_images_base_path = images_base_path.format(algorithm)
 
-    if not os.path.exists(iqr_csv_base_path):
-        os.makedirs(iqr_csv_base_path)
-
-    if not os.path.exists(iqr_image_base_path):
-        os.makedirs(iqr_image_base_path)
+        if not os.path.exists(algo_csv_base_path):
+            os.makedirs(algo_csv_base_path)
+    
+        if not os.path.exists(algo_images_base_path):
+            os.makedirs(algo_images_base_path)
 
     for sensor in sensors:
         csv_file_name = sensor + '.csv'
         image_file_name = sensor + '.png'
-        zscore_list = []
-        iqr_list = []
+        result = {}
+        
+        for algorithm in algorithms:
+            result[algorithm] = []
 
         for sub_system in sub_system_names:
-            sub_df = df[(df.sub_system == sub_system) & (df.sensor == sensor)].copy()
-            # Calculate zscore
-            sub_df['zscore'] = (sub_df['value'] - sub_df['value'].mean())/sub_df['value'].std()
-            sub_df['outlier'] = sub_df['zscore'].apply(lambda x: True if np.absolute(x) > 2.5 else False)
-            zscore_list.append(sub_df)
+            sub_df = df[(df.sub_system == sub_system) & (df.sensor == sensor)]
+    
+            if 'zscore' in algorithms:
+                # Calculate zscore
+                zscore_df = sub_df.copy()
+                zscore_df['zscore'] = (zscore_df['value'] - zscore_df['value'].mean())/zscore_df['value'].std()
+                zscore_df['outlier'] = zscore_df['zscore'].apply(lambda x: True if np.absolute(x) > 2.5 else False)
+                result['zscore'].append(zscore_df)
 
-            # Calculate iqr
-            sub_df2 = df[(df.sub_system == sub_system) & (df.sensor == sensor)].copy()
-            sub_df2 = sub_df2.sort_values(by='value')
-            quatile = sub_df2.quantile([.25, .75])
-            q1, q3 = quatile['value'].iloc[0], quatile['value'].iloc[1]
-            iqr = q3 - q1
-            lower_bound, upper_bound = q1 - (1.5 * iqr), q3 + (1.5 * iqr)
-            sub_df2['outlier'] = sub_df2['value'].apply(lambda x: True if x < lower_bound or x > upper_bound else False)
-            iqr_list.append(sub_df2)
+            if 'iqr' in algorithms:
+                # Calculate iqr
+                iqr_df = sub_df.copy()
+                iqr_df = df[(df.sub_system == sub_system) & (df.sensor == sensor)].copy()
+                iqr_df = iqr_df.sort_values(by='value')
+                quatile = iqr_df.quantile([.25, .75])
+                q1, q3 = quatile['value'].iloc[0], quatile['value'].iloc[1]
+                iqr = q3 - q1
+                lower_bound, upper_bound = q1 - (1.5 * iqr), q3 + (1.5 * iqr)
+                iqr_df['outlier'] = iqr_df['value'].apply(lambda x: True if x < lower_bound or x > upper_bound else False)
+                result['iqr'].append(iqr_df)
 
-        sensor_df_for_zscore = pd.concat(zscore_list, axis = 0, ignore_index = True)
-        sensor_df_for_zscore.to_csv(os.path.join(zscore_csv_base_path, csv_file_name), index=False)
-        print('Finished exporting csv file about', sensor)
-        sns.relplot(x="cloudTimestamp", y="value", hue="outlier", col="sub_system", col_wrap=3, data=sensor_df_for_zscore)
-        plt.savefig(os.path.join(zscore_image_base_path, image_file_name))
-        plt.close()
-        print('Finished exporting image file about', sensor)
+            if 'localfactor' in algorithms:
+                # Calculate local outlier factor
+                pass
 
-        sensor_df_for_iqr = pd.concat(iqr_list, axis = 0, ignore_index = True)
-        sensor_df_for_iqr.to_csv(os.path.join(iqr_csv_base_path, csv_file_name), index=False)
-        print('Finished exporting csv file about', sensor)
-        sns.relplot(x="cloudTimestamp", y="value", hue="outlier", col="sub_system", col_wrap=3, data=sensor_df_for_iqr)
-        plt.savefig(os.path.join(iqr_image_base_path, image_file_name))
-        plt.close()
-        print('Finished exporting image file about', sensor)
-
-
+        for algorithm in algorithms:
+            df_by_sensor = pd.concat(result[algorithm], axis = 0, ignore_index = True)
+            df_by_sensor.to_csv(os.path.join(csv_base_path.format(algorithm), csv_file_name), index=False)
+            print('Finished exporting csv file about', sensor)
+            sns.relplot(x="cloudTimestamp", y="value", hue="outlier", col="sub_system", col_wrap=3, data=df_by_sensor)
+            plt.savefig(os.path.join(images_base_path.format(algorithm), image_file_name))
+            plt.close()
+            print('Finished exporting image file about', sensor)
 
 
 if __name__ =='__main__':
@@ -136,4 +139,4 @@ if __name__ =='__main__':
 
     df, sensors = extract_info(df)
 
-    detect_outliers_by_zscore_iqr(df, sensors)
+    detect_outliers(df, sensors, algorithms)
