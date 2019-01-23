@@ -62,8 +62,10 @@ def extract_info(df):
         sub_sensors.to_csv('data/' + sub_system + '_sensors.csv', index=False, header=None)
     
     print('Finished exporting sensors individually')
-    return df, df[df['sub_system'] == '227001']['sensor'].unique()
-
+    sensor_names = df[df['sub_system'] == '227001']['sensor'].unique()
+    sensor_names = pd.Series(sensor_names)
+    sensor_names = sensor_names.sort_values()
+    return df, sensor_names.values
 
 def detect_outliers(df, sensors, algorithms):
     csv_base_path = 'results/{0}/csv'
