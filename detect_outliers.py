@@ -61,7 +61,7 @@ def extract_info(df):
     return df, df[df['sub_system'] == '227001']['sensor'].unique()
 
 
-def detect_outliers_by_zscore(df, sensors):
+def detect_outliers_by_zscore_iqr(df, sensors):
     zscore_csv_base_path = 'results/zscore/csv'
     zscore_image_base_path = 'results/zscore/images'
     iqr_csv_base_path = 'results/iqr/csv'
@@ -136,4 +136,4 @@ if __name__ =='__main__':
 
     df, sensors = extract_info(df)
 
-    detect_outliers_by_zscore(df, sensors)
+    detect_outliers_by_zscore_iqr(df, sensors)
